@@ -1,0 +1,14 @@
+{
+  "name": "ed25519-dalek",
+  "version": "0.1.0",
+  "description": "",
+  "main": "lib/index.js",
+  "author": "Johan Stén <johan@futuretense.io>",
+  "license": "MIT",
+  "dependencies": {
+    "neon-cli": "^0.2.0"
+  },
+  "scripts": {
+    "install": "npx neon build --release"
+  }
+}
