@@ -1,6 +1,6 @@
 {
-  "name": "ed25519-dalek",
-  "version": "0.1.0",
+  "name": "@futuretense/ed25519-dalek",
+  "version": "0.0.2",
   "description": "",
   "main": "lib/index.js",
   "author": "Johan Stén <johan@futuretense.io>",
@@ -8,7 +8,8 @@
   "dependencies": {
     "neon-cli": "^0.2.0"
   },
+  "cpu" : [ "x64" ],
   "scripts": {
-    "install": "npx neon build --release"
+    "install": "RUSTFLAGS='-C target-feature=+avx2' npx neon build --release"
   }
 }
