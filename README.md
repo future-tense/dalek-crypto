@@ -2,30 +2,15 @@
 
 Javascript bindings to *some* of the functionality in the brilliant Rust library `ed25519-dalek`<sup>[1](#note1)</sup>
 
+### Requirements
+
+* Rust (https://www.rust-lang.org/tools/install)
+* a target CPU with AVX2 extensions
+
 ### Installing and compiling
 
-If you have a CPU with AVX2 extensions, run
-
 ```
-npm install
-npm link
-RUSTFLAGS='-C target-feature=+avx2' npx neon build --release
-```
-
-If not,
-
-```
-npm install
-npm link
-npx neon build --release
-```
-
-### Using
-
-Go to the project where you want to use this, and run
-
-```
-npm link ed25519-dalek
+npm install @futuretense/ed25519-dalek
 ```
 
 ### Benchmarks
