@@ -1,6 +1,6 @@
 [package]
 name = "ed25519-dalek-js"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Johan Stén <johan@futuretense.io>"]
 license = "MIT"
 build = "build.rs"

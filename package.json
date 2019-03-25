@@ -1,6 +1,6 @@
 {
   "name": "@futuretense/ed25519-dalek",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "lib/index.js",
   "author": "Johan Stén <johan@futuretense.io>",

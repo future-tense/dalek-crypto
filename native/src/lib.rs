@@ -18,9 +18,7 @@ use ed25519_dalek::PUBLIC_KEY_LENGTH;
 use ed25519_dalek::SIGNATURE_LENGTH;
 
 use curve25519_dalek::edwards::EdwardsPoint;
-use curve25519_dalek::edwards::CompressedEdwardsY;
 use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::constants::ED25519_BASEPOINT_COMPRESSED;
 
 
 pub fn buf_copy_from_slice(cx: FunctionContext, source: &[u8], buf: &mut Handle<JsBuffer>) {
