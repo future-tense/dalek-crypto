@@ -1,6 +1,6 @@
-# ed25519-dalek
+# dalek-crypto
 
-Javascript bindings to *some* of the functionality in the brilliant Rust library `ed25519-dalek`<sup>[1](#note1)</sup>
+Javascript bindings to *some* of the functionality in the brilliant `dalek cryptography`<sup>[1](#note1)</sup> set of Rust libraries
 
 ### Requirements
 
@@ -10,7 +10,7 @@ Javascript bindings to *some* of the functionality in the brilliant Rust library
 ### Installing and compiling
 
 ```
-npm install @futuretense/ed25519-dalek
+npm install @futuretense/dalek-crypto
 ```
 
 ### Benchmarks
@@ -25,6 +25,7 @@ npm install @futuretense/ed25519-dalek
 
 Notes:<br>
 
-<br><a name="note1"> 1) https://github.com/dalek-cryptography/ed25519-dalek</a><br>
+<br><a name="note1"> 1) https://github.com/dalek-cryptography/
+</a><br>
 <br><a name="note2"> 2) https://www.npmjs.com/package/ed25519</a><br>
 <br><a name="note3"> 3) https://www.npmjs.com/package/sodium-native</a><br>
