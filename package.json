@@ -11,7 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "@types/node": "^13.9.0",
-    "neon-cli": "^0.3.3"
+    "neon-cli": "^0.2.0"
   },
   "cpu": [
     "x64"
