@@ -18,7 +18,9 @@ use ed25519_dalek::PUBLIC_KEY_LENGTH;
 use ed25519_dalek::SIGNATURE_LENGTH;
 
 use curve25519_dalek::edwards::EdwardsPoint;
+use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::constants;
 
 
 pub fn buf_copy_from_slice(cx: FunctionContext, source: &[u8], buf: &mut Handle<JsBuffer>) {
@@ -38,7 +40,7 @@ pub fn generate_public_key(mut cx: FunctionContext) -> JsResult<JsBuffer> {
     let sk_bytes = cx.borrow(&sk_buf, |data| data.as_slice());
 
     let sk: SecretKey = SecretKey::from_bytes(&sk_bytes).unwrap();
-    let pk: PublicKey = PublicKey::from_secret::<Sha512>(&sk);
+    let pk: PublicKey = PublicKey::from(&sk);
 
     let result: [u8; PUBLIC_KEY_LENGTH] = pk.to_bytes();
     let mut result_buf = JsBuffer::new(&mut cx, PUBLIC_KEY_LENGTH as u32)?;
@@ -68,7 +70,7 @@ pub fn sign(mut cx: FunctionContext) -> JsResult<JsBuffer> {
     let msg_buf: Handle<JsBuffer> = cx.argument(2)?;
     let msg_bytes = cx.borrow(&msg_buf, |data| data.as_slice());
 
-    let signature: Signature = kp.sign::<Sha512>(&msg_bytes);
+    let signature: Signature = kp.sign(&msg_bytes);
     let result: [u8; SIGNATURE_LENGTH] = signature.to_bytes();
     let mut result_buf = JsBuffer::new(&mut cx, SIGNATURE_LENGTH as u32)?;
     buf_copy_from_slice(cx, result.as_ref(), &mut result_buf);
@@ -97,7 +99,7 @@ pub fn verify(mut cx: FunctionContext) -> JsResult<JsBoolean> {
     let sig: Signature = Signature::from_bytes(&sig_bytes).unwrap();
 
     let result: bool;
-    match kp.verify::<Sha512>(&msg_bytes, &sig) {
+    match kp.verify(&msg_bytes, &sig) {
         Ok(_)  => {result = true},
         Err(_) => {result = false}
     }
@@ -106,12 +108,60 @@ pub fn verify(mut cx: FunctionContext) -> JsResult<JsBoolean> {
 }
 
 /**
- *  @param Buffer scalar 
+ *  @param Buffer point1
+ *  @param Buffer point2
+ *  @returns Buffer sum
+ */
+
+pub fn edwards_add(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let p1_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let p1_bytes = cx.borrow(&p1_buf, |data| data.as_slice());
+    let point1: EdwardsPoint = bincode::deserialize(p1_bytes).unwrap();
+
+    let p2_buf: Handle<JsBuffer> = cx.argument(1)?;
+    let p2_bytes = cx.borrow(&p2_buf, |data| data.as_slice());
+    let point2: EdwardsPoint = bincode::deserialize(p2_bytes).unwrap();
+
+    let res: EdwardsPoint = point1 + point2;
+    let res_bytes = bincode::serialize(&res).unwrap();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+/**
+ *  @param Buffer point1
+ *  @param Buffer point2
+ *  @returns Buffer sum
+ */
+
+pub fn edwards_sub(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let p1_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let p1_bytes = cx.borrow(&p1_buf, |data| data.as_slice());
+    let point1: EdwardsPoint = bincode::deserialize(p1_bytes).unwrap();
+
+    let p2_buf: Handle<JsBuffer> = cx.argument(1)?;
+    let p2_bytes = cx.borrow(&p2_buf, |data| data.as_slice());
+    let point2: EdwardsPoint = bincode::deserialize(p2_bytes).unwrap();
+
+    let res: EdwardsPoint = point1 - point2;
+    let res_bytes = bincode::serialize(&res).unwrap();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+/**
+ *  @param Buffer scalar
  *  @param Buffer point
  *  @return Buffer point
  */
 
-pub fn edwards_scalarmult(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+pub fn edwards_mul(mut cx: FunctionContext) -> JsResult<JsBuffer> {
 
     let s_buf: Handle<JsBuffer> = cx.argument(0)?;
     let scalar: Scalar = cx.borrow(&s_buf, |data| {
@@ -134,22 +184,22 @@ pub fn edwards_scalarmult(mut cx: FunctionContext) -> JsResult<JsBuffer> {
 }
 
 /**
- *  @param Buffer point1
- *  @param Buffer point2
- *  @returns Buffer sum
+ *  @param Buffer scalar
+ *  @param Buffer point
+ *  @return Buffer point
  */
 
-pub fn edwards_addpoints(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+pub fn edwards_mulbp(mut cx: FunctionContext) -> JsResult<JsBuffer> {
 
-    let p1_buf: Handle<JsBuffer> = cx.argument(0)?;
-    let p1_bytes = cx.borrow(&p1_buf, |data| data.as_slice());
-    let point1: EdwardsPoint = bincode::deserialize(p1_bytes).unwrap();
+    let s_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let scalar: Scalar = cx.borrow(&s_buf, |data| {
+        let mut s_temp: [u8; 32] = [0; 32];
+        let (left, _right) = data.as_mut_slice().split_at_mut(32);
+        s_temp.copy_from_slice(left);
+        Scalar::from_bytes_mod_order(s_temp)
+    });
 
-    let p2_buf: Handle<JsBuffer> = cx.argument(1)?;
-    let p2_bytes = cx.borrow(&p2_buf, |data| data.as_slice());
-    let point2: EdwardsPoint = bincode::deserialize(p2_bytes).unwrap();
-
-    let res: EdwardsPoint = point1 + point2;
+    let res: EdwardsPoint = &constants::ED25519_BASEPOINT_TABLE * &scalar;
     let res_bytes = bincode::serialize(&res).unwrap();
     let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
     buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
@@ -157,19 +207,121 @@ pub fn edwards_addpoints(mut cx: FunctionContext) -> JsResult<JsBuffer> {
     Ok(result_buf)
 }
 
-pub fn scalar_from_hash(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+//
+//
+//
 
-    let msg_buf: Handle<JsBuffer> = cx.argument(0)?;
-    let msg_bytes = cx.borrow(&msg_buf, |data| data.as_slice());
+/**
+ *  @param Buffer point1
+ *  @param Buffer point2
+ *  @returns Buffer sum
+ */
 
-    let res: Scalar = Scalar::hash_from_bytes::<Sha512>(msg_bytes);
+pub fn ristretto_add(mut cx: FunctionContext) -> JsResult<JsBuffer> {
 
-    let res_bytes = res.to_bytes();
+    let p1_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let p1_bytes = cx.borrow(&p1_buf, |data| data.as_slice());
+    let point1: RistrettoPoint = bincode::deserialize(p1_bytes).unwrap();
+
+    let p2_buf: Handle<JsBuffer> = cx.argument(1)?;
+    let p2_bytes = cx.borrow(&p2_buf, |data| data.as_slice());
+    let point2: RistrettoPoint = bincode::deserialize(p2_bytes).unwrap();
+
+    let res: RistrettoPoint = point1 + point2;
+    let res_bytes = bincode::serialize(&res).unwrap();
     let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
     buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
 
     Ok(result_buf)
 }
+
+/**
+ *  @param Buffer point1
+ *  @param Buffer point2
+ *  @returns Buffer sum
+ */
+
+pub fn ristretto_sub(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let p1_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let p1_bytes = cx.borrow(&p1_buf, |data| data.as_slice());
+    let point1: RistrettoPoint = bincode::deserialize(p1_bytes).unwrap();
+
+    let p2_buf: Handle<JsBuffer> = cx.argument(1)?;
+    let p2_bytes = cx.borrow(&p2_buf, |data| data.as_slice());
+    let point2: RistrettoPoint = bincode::deserialize(p2_bytes).unwrap();
+
+    let res: RistrettoPoint = point1 - point2;
+    let res_bytes = bincode::serialize(&res).unwrap();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+/**
+ *  @param Buffer scalar
+ *  @param Buffer point
+ *  @return Buffer point
+ */
+
+pub fn ristretto_mul(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let s_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let scalar: Scalar = cx.borrow(&s_buf, |data| {
+        let mut s_temp: [u8; 32] = [0; 32];
+        let (left, _right) = data.as_mut_slice().split_at_mut(32);
+        s_temp.copy_from_slice(left);
+        Scalar::from_bytes_mod_order(s_temp)
+    });
+
+    let p_buf: Handle<JsBuffer> = cx.argument(1)?;
+    let p_bytes = cx.borrow(&p_buf, |data| data.as_slice());
+    let point: RistrettoPoint = bincode::deserialize(p_bytes).unwrap();
+
+    let res: RistrettoPoint = point * scalar;
+    let res_bytes = bincode::serialize(&res).unwrap();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+pub fn ristretto_mulbp(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let s_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let scalar: Scalar = cx.borrow(&s_buf, |data| {
+        let mut s_temp: [u8; 32] = [0; 32];
+        let (left, _right) = data.as_mut_slice().split_at_mut(32);
+        s_temp.copy_from_slice(left);
+        Scalar::from_bytes_mod_order(s_temp)
+    });
+
+    let res: RistrettoPoint = &constants::RISTRETTO_BASEPOINT_TABLE * &scalar;
+    let res_bytes = bincode::serialize(&res).unwrap();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+pub fn ristretto_from_hash(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let msg_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let msg_bytes = cx.borrow(&msg_buf, |data| data.as_slice());
+
+    let res: RistrettoPoint = RistrettoPoint::hash_from_bytes::<Sha512>(msg_bytes);
+
+    let res_bytes = bincode::serialize(&res).unwrap();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+//
+//
+//
 
 pub fn scalar_add(mut cx: FunctionContext) -> JsResult<JsBuffer> {
 
@@ -197,7 +349,7 @@ pub fn scalar_add(mut cx: FunctionContext) -> JsResult<JsBuffer> {
     Ok(result_buf)
 }
 
-pub fn scalar_mult(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+pub fn scalar_sub(mut cx: FunctionContext) -> JsResult<JsBuffer> {
 
     let s_buf1: Handle<JsBuffer> = cx.argument(0)?;
     let scalar1: Scalar = cx.borrow(&s_buf1, |data| {
@@ -215,7 +367,7 @@ pub fn scalar_mult(mut cx: FunctionContext) -> JsResult<JsBuffer> {
         Scalar::from_bytes_mod_order(s_temp)
     });
 
-    let res = scalar1 * scalar2;
+    let res = scalar1 - scalar2;
     let res_bytes = res.to_bytes();
     let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
     buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
@@ -223,13 +375,88 @@ pub fn scalar_mult(mut cx: FunctionContext) -> JsResult<JsBuffer> {
     Ok(result_buf)
 }
 
+pub fn scalar_mul(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let s_buf1: Handle<JsBuffer> = cx.argument(0)?;
+    let scalar1: Scalar = cx.borrow(&s_buf1, |data| {
+        let mut s_temp: [u8; 32] = [0; 32];
+        let (left, _right) = data.as_mut_slice().split_at_mut(32);
+        s_temp.copy_from_slice(left);
+        Scalar::from_bytes_mod_order(s_temp)
+    });
+
+    let s_buf2: Handle<JsBuffer> = cx.argument(1)?;
+    let scalar2: Scalar = cx.borrow(&s_buf2, |data| {
+        let mut s_temp: [u8; 32] = [0; 32];
+        let (left, _right) = data.as_mut_slice().split_at_mut(32);
+        s_temp.copy_from_slice(left);
+        Scalar::from_bytes_mod_order(s_temp)
+    });
+
+    let res: Scalar = scalar1 * scalar2;
+    let res_bytes = res.to_bytes();
+
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+pub fn scalar_inverse(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let s_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let scalar: Scalar = cx.borrow(&s_buf, |data| {
+        let mut s_temp: [u8; 32] = [0; 32];
+        let (left, _right) = data.as_mut_slice().split_at_mut(32);
+        s_temp.copy_from_slice(left);
+        Scalar::from_bytes_mod_order(s_temp)
+    });
+
+    let res = Scalar::invert(&scalar);
+    let res_bytes = res.to_bytes();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+pub fn scalar_from_hash(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+
+    let msg_buf: Handle<JsBuffer> = cx.argument(0)?;
+    let msg_bytes = cx.borrow(&msg_buf, |data| data.as_slice());
+
+    let res: Scalar = Scalar::hash_from_bytes::<Sha512>(msg_bytes);
+
+    let res_bytes = res.to_bytes();
+    let mut result_buf = JsBuffer::new(&mut cx, res_bytes.len() as u32)?;
+    buf_copy_from_slice(cx, res_bytes.as_ref(), &mut result_buf);
+
+    Ok(result_buf)
+}
+
+//
+//
+//
+
 register_module!(mut cx, {
     cx.export_function("generatePublicKey", generate_public_key)?;
     cx.export_function("sign", sign)?;
     cx.export_function("verify", verify)?;
-    cx.export_function("edwards_scalarmult", edwards_scalarmult)?;
-    cx.export_function("edwards_addpoints", edwards_addpoints)?;
-    cx.export_function("scalar_from_hash", scalar_from_hash)?;
+
+    cx.export_function("edwards_add", edwards_add)?;
+    cx.export_function("edwards_sub", edwards_sub)?;
+    cx.export_function("edwards_mul", edwards_mul)?;
+    cx.export_function("edwards_mulbp", edwards_mulbp)?;
+
+    cx.export_function("ristretto_add", ristretto_add)?;
+    cx.export_function("ristretto_sub", ristretto_sub)?;
+    cx.export_function("ristretto_mul", ristretto_mul)?;
+    cx.export_function("ristretto_mulbp", ristretto_mulbp)?;
+    cx.export_function("ristretto_from_hash", ristretto_from_hash)?;
+
     cx.export_function("scalar_add", scalar_add)?;
-    cx.export_function("scalar_mult", scalar_mult)
+    cx.export_function("scalar_sub", scalar_sub)?;
+    cx.export_function("scalar_mul", scalar_mul)?;
+    cx.export_function("scalar_inverse", scalar_inverse)?;
+    cx.export_function("scalar_from_hash", scalar_from_hash)
 });

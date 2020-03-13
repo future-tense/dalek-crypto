@@ -1,6 +1,6 @@
 [package]
 name = "ed25519-dalek-js"
-version = "0.0.3"
+version = "0.1.0"
 authors = ["Johan Stén <johan@futuretense.io>"]
 license = "MIT"
 build = "build.rs"
@@ -11,20 +11,21 @@ name = "ed25519_dalek_js"
 crate-type = ["dylib"]
 
 [build-dependencies]
-neon-build = "0.2.0"
+neon-build = "0.4.0"
 
 [dependencies]
-neon = "0.2.0"
+neon = "0.4.0"
 sha2 = "0.8.0"
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 bincode = "1"
 
 [dependencies.ed25519-dalek]
-version = "0.9.1"
+git = "https://github.com/dalek-cryptography/ed25519-dalek"
+branch = "develop"
 default-features = false
-features = ["avx2_backend", "serde"]
+features = ["simd_backend", "serde", "rand"]
 
 [dependencies.curve25519-dalek]
-version = "1"
+version = "2"
 default-features = false
-features = ["avx2_backend", "serde"]
+features = ["simd_backend", "serde"]

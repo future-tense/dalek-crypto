@@ -1,14 +1,21 @@
 {
   "name": "@futuretense/ed25519-dalek",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "",
   "main": "lib/index.js",
   "author": "Johan Stén <johan@futuretense.io>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/future-tense/ed25519-dalek.git"
+  },
   "license": "MIT",
   "dependencies": {
-    "neon-cli": "^0.2.0"
+    "@types/node": "^13.9.0",
+    "neon-cli": "^0.3.3"
   },
-  "cpu" : [ "x64" ],
+  "cpu": [
+    "x64"
+  ],
   "scripts": {
     "install": "RUSTFLAGS='-C target-feature=+avx2' npx neon build --release"
   }
